@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   /* config options here */
   experimental: {
     agentFeedback: true,
+    agentUpgrade: "security",
     // CV uploads go through a Server Action; the file limit itself is CV_MAX_BYTES (5 MB).
     serverActions: {
       bodySizeLimit: "6mb",
