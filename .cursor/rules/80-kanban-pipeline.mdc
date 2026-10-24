@@ -1,0 +1,32 @@
+---
+description: Kanban pipeline, job cards, CV versioning, and dashboard behavior
+globs: **/kanban/**,**/pipeline/**,**/jobs/**,**/resumes/**,**/dashboard/**
+alwaysApply: false
+---
+
+# Pipeline, job cards, CVs, dashboard
+
+## Job cards
+- Created manually or by pasting a JD link. Auto-saved metadata: **company name, position, application date**. Do not add other required fields without asking.
+- Link -> content extraction is **not specified**; ask which approach to use (and apply SSRF protections from `20-api-data.mdc`). Always keep a manual fallback when extraction fails.
+- Saving a JD triggers: skill extraction + scam check (non-blocking, async-friendly).
+
+## Kanban
+- Drag-and-drop moves cards between stages. **Persist optimistically with rollback on failure.**
+- Stage list is **not specified**: ask before hardcoding. Keep stages in one config/source of truth, not scattered strings.
+- Keep ordering within a column stable and persisted if the user approves ordering.
+- Provide keyboard/button alternative to drag-and-drop (accessibility).
+- Show a warning indicator on cards whose JD has a scam warning or high community flag weight.
+- Record stage-change history (timestamp) if approved; it will help the dashboard.
+
+## CV versioning
+- A CV can have multiple **versions**; versions are immutable snapshots, a new edit creates a new version.
+- Skill-gap analysis always references a specific CV version, and the result stores which version was used.
+- Supported upload formats are not specified; ask before implementing parsing.
+
+## Skill-gap view
+- Show **matched**, **missing**, and **extra** skills, clearly and accessibly. Mark results as AI-assisted.
+- Handle empty CV / empty JD / extraction-unavailable states.
+
+## Dashboard
+- Contents are not specified. Propose a minimal set (e.g. counts per stage, recent activity, warnings) and wait for approval. Compute from real data only; no placeholder charts presented as real.

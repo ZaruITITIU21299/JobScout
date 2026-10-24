@@ -1,0 +1,37 @@
+---
+description: Clarification, planning and safe-edit behavior for every task
+alwaysApply: true
+---
+
+# Workflow
+
+## Before writing code
+1. Restate the request in one or two sentences and name the module it belongs to (see `AGENTS.md` section 2).
+2. Classify the task:
+   - **Small fix** (clearly requested, 1–3 files, no schema/dependency/architecture change): state the planned change in one sentence, then proceed.
+   - **Needs approval**: new feature, architecture change, new dependency, DB schema change, file deletion, or edits across more than three files. Present a short plan and **wait for approval**.
+3. If anything is ambiguous, ask **one focused question** with a recommended default.
+
+## Plan format (for tasks needing approval)
+- Goal (one line) and module
+- Files to create / modify / delete
+- Approach and alternatives considered (one line each)
+- Risks (data loss, security, scope creep)
+- How it will be tested
+
+## Safe-edit rules
+- Read the relevant files before editing. Do not edit from memory.
+- Keep diffs minimal and focused. No unrelated formatting changes, renames, or refactors.
+- Do not delete or rewrite files you did not create without approval.
+- Never touch `.env*` files with real values, lockfiles (unless adding an approved dependency), or generated files by hand.
+- Migrations are append-only: never edit an applied migration; add a new one (after approval).
+- If a command could be destructive or irreversible, show it and ask first.
+- If tests fail, report the failure honestly. Do not weaken or delete tests to make them pass.
+- If you break something, say so, then fix it.
+
+## After implementing
+Always finish with:
+1. **What changed**
+2. **Why it changed**
+3. **How to test it** (exact commands and/or manual steps)
+4. **Assumptions made** (and anything you could not verify)

@@ -1,0 +1,48 @@
+---
+description: JobScout domain context, glossary, roles, and data model sketch
+alwaysApply: true
+---
+
+# Project context
+
+JobScout is a thesis project: a web platform where job seekers track applications on a Kanban board, get LLM-based analysis of job descriptions, and are protected from fake jobs by rules + AI + community flags.
+
+## Glossary
+- **JD**: Job Description (text and/or source URL).
+- **Job card**: one tracked application/job entry on the Kanban board.
+- **Pipeline / stage**: the Kanban columns a card moves through. Exact stage names are **not specified in the form**; ask before hardcoding them.
+- **CV / resume version**: a saved snapshot of a user's CV. Users can keep several versions.
+- **Skill extraction**: LLM turns a JD into a structured JSON list of required skills.
+- **Skill-gap analysis**: compare a chosen CV against a JD's extracted skills.
+- **Rule-based engine**: deterministic, configurable rules that detect red flags in a JD.
+- **AI semantic analysis**: LLM estimate of the probability that a JD is deceptive/MLM, used when rules are inconclusive.
+- **Flag**: a user's report against a JD or Company with a reason.
+- **Trust Score**: per-user number reflecting reliability; drives the weight of that user's flags and some permissions.
+- **Weighted voting**: a JD/Company's warning level = sum of the weights of all (non-frozen) flags against it.
+- **Frozen flag**: a flag held back automatically by anti-gaming checks until an admin reviews it.
+- **Blacklist**: admin-managed list of known-bad companies/JDs/domains.
+- **RLS**: Row Level Security in the database.
+
+## Roles
+- **User (Job Seeker)**: manages own profile, CVs, job cards, flags. Can read shared warning data (aggregate flag weight, blacklist hits) but never other users' private data.
+- **Administrator**: reviews flagged/frozen content, manages the blacklist. Only these two roles exist.
+
+## Data model sketch (from the form; NOT final)
+Entities named in the form: users, resumes (with versions), job pipelines/job cards, flags, trust scores.
+Likely also needed (confirm before creating): JD analysis results (skills JSON, scam verdict + evidence), blacklist entries, audit/log records for AI and rule decisions.
+Any table/column design requires approval (schema change).
+
+## Key user flows
+1. Add job (manual or paste link) -> metadata saved automatically (company, position, application date) -> JD saved -> skills extracted -> scam check runs -> card appears in Kanban.
+2. Pick a CV -> run skill-gap against a JD -> view matched/missing skills.
+3. View JD with warning banner (evidence listed) -> optionally flag it.
+4. Admin opens review queue (flagged + frozen items) -> decides -> updates blacklist and trust scores.
+
+## Open questions (do not assume; ask when relevant)
+- UI component library, styling, validation library, test runner, data-fetching approach (not yet decided).
+- Where server-side logic and LLM calls run: Next.js route handlers/server actions vs Supabase Edge Functions.
+- Whether Upstash Redis is final for rate limiting (currently tentative).
+- Kanban stage names and whether users can customize them.
+- How a JD link is turned into text (fetching/parsing is not specified).
+- Trust Score formula, thresholds, rate limits, verification method.
+- File formats supported for CV upload.

@@ -1,0 +1,58 @@
+---
+description: JobScout visual theme (dark industrial HUD, black/gold, Endfield-inspired) and UI component conventions
+globs: **/*.tsx,**/*.css,**/components/**,**/app/**
+alwaysApply: false
+---
+
+# UI theme: "industrial HUD" (black + gold)
+
+Direction: dark, technical, sci-fi terminal feel inspired by Arknights: Endfield and community tool sites for it.
+**Inspiration only.** Do not use game assets, logos, character art, icons, or proprietary fonts. Everything must be original or openly licensed.
+Values below are **proposals**: the user approves or edits them once, then they live in design tokens and nowhere else.
+
+## Priorities (in order)
+1. Readability and accessibility 2. Consistency 3. Atmosphere.
+If decoration hurts legibility (especially on dense Kanban cards, tables, and JD text), remove the decoration.
+
+## Tokens (single source of truth)
+- Define tokens once as CSS variables in the global stylesheet and expose them through the Tailwind theme. **No hardcoded hex/rgb values in components.**
+- Proposed palette:
+  - background `#0b0b0c`, surface `#18181b`, surface-raised `#1f1f23`, border `#2e2e35`
+  - text `#ece9e2`, text-muted `#a0a0aa`
+  - brand/accent (gold) `#ffe066`, accent-dim `#b8982f`; text on gold fills is near-black
+  - semantic: danger (red), caution (orange), success (green), info (cyan)
+- **Gold = brand, selection, focus, primary action.** It is NOT a warning color.
+- **Scam / risk states use danger red or caution orange, always with an icon and text**, never gold, never color alone. Warning banners may use a hazard-stripe motif.
+- Verify contrast with real numbers: normal text >= 4.5:1, large text and UI boundaries >= 3:1, including text on gold fills and muted text on surfaces.
+- Dark theme only for now. A light theme is out of scope unless the user approves.
+
+## Shape and motifs
+- Sharp rectangles, 1px borders, thin gold accent lines, subtle grid/noise background.
+- **Chamfered (clipped) corners** on a few key containers (panels, primary buttons, banners) via a reusable utility. Never clip containers with text near the corners or focus outlines.
+- Corner brackets, `// SECTION.LABEL` monospace micro-labels (uppercase, tracked), status chips, small version/NEW/ALPHA badges.
+- Keep it restrained: at most one or two motifs per component.
+
+## Typography
+- Display/headings: a condensed technical sans. Labels, IDs, metadata: a monospace. Body: highly readable sans.
+- Use open-license fonts loaded with `next/font`, with proper fallbacks. Propose 2 options and get approval.
+- Monospace and uppercase are for labels only, never for paragraphs or JD content.
+
+## Motion
+- 150-250ms transitions; subtle glow/scan effects only on hover/focus or page entry.
+- Respect `prefers-reduced-motion`. No heavy animation during drag-and-drop.
+
+## Accessibility (non-negotiable)
+- Visible gold focus ring (2px + offset) on every interactive element; not hidden by clip-path or overflow.
+- Full keyboard operation; Kanban has a non-drag alternative (see `10-react-typescript.mdc`).
+- Hit targets >= 40px where practical. Text resizable to 200% without loss.
+- Status never conveyed by color alone.
+
+## Components
+- Build a small primitive set in `components/ui/` and compose screens from it: Button, IconButton, Input, Textarea, Select, Checkbox, Badge/StatusChip, Panel, Tabs, Dialog, Tooltip, Toast, Table, Skeleton, EmptyState, Banner (info / caution / danger variants), CommandSearch (Cmd/Ctrl+K), AppShell (sidebar + topbar).
+- Prefer an accessible headless/primitive library over hand-rolled dialogs, menus, and tabs. Which library is **not decided**: propose options and ask.
+- Domain components (KanbanColumn, KanbanCard, ScamWarningBanner, SkillGapList, FlagDialog, TrustBadge) live outside `ui/` and are built on the primitives.
+- Every component handles loading, empty, error states where relevant, and is responsive from 360px up. Desktop-first density is fine.
+
+## Process
+- UI-only work uses **mock data** from a `mocks/` folder with the same types as the real domain types. No backend calls in design-system tasks.
+- A dev-only `/design` page ("kitchen sink") shows every primitive and state, for visual review.

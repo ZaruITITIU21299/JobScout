@@ -1,0 +1,42 @@
+---
+description: Trust Score, weighted voting, rate limiting and anti-gaming for community flags
+globs: **/flags/**,**/trust/**,**/moderation/**,**/admin/**
+alwaysApply: false
+---
+
+# Trust Score, flagging, anti-gaming
+
+Source: form section 1 and 5. The form defines the *concepts*, **not the numbers**. Do not invent formulas without approval.
+
+## What is specified
+- Trust Score depends on: **verification status**, **account history**, **accuracy of previous reports**.
+- A flag targets a **JD or a Company** and has a reason (e.g. "Scam", "Title mismatch").
+- Warning strength for a JD/Company = **sum of weights of all flags**, where each weight is derived from the reporter's Trust Score.
+- **Rate limiting** of flagging.
+- **Anomaly detection** for gaming, e.g. many new accounts flagging the same JD in a short window.
+- Suspicious flags are **frozen automatically** and sent to **admin review**.
+
+## What is NOT specified (ask first, propose defaults, wait for approval)
+- Trust Score range, starting value, update formula, decay.
+- Weight function (linear? capped? tiers?).
+- Warning thresholds (when does a banner show / escalate to admin?).
+- Rate limit numbers and windows; "new account" definition; burst thresholds.
+- What "verification" means (email verified? OAuth?).
+
+When proposing, present 2 options with trade-offs and a recommendation. Put approved values in a single config module with comments.
+
+## Implementation rules
+- Pure functions for `computeTrustScore`, `computeFlagWeight`, `aggregateTargetWeight`, `detectAnomaly`: easy to unit test and to explain in the thesis.
+- **One flag per (user, target)**; enforce with a DB unique constraint.
+- Frozen flags **do not count** toward weight until an admin releases them.
+- Admin decisions feed back: confirmed-accurate flags raise the reporter's trust; rejected/malicious flags lower it. Log every change with reason.
+- Anomaly signals must be explainable: store *which* signal fired (e.g. `NEW_ACCOUNT_BURST`, `SAME_TARGET_BURST`) with the numbers behind it. Admin UI shows them.
+- Anti-gaming must not punish honest users silently: freeze, do not delete; keep an audit trail.
+- Self-flagging or flagging a company the user has no relation to is allowed unless the user says otherwise; don't invent extra restrictions.
+- Never expose reporter identity to non-admins.
+- Include simulation tests: scripted attack scenarios (sybil burst, rapid-fire flagging, coordinated flagging) that show the system freezing them. These are also thesis evidence.
+
+## Rate limiting vs anomaly detection
+- **Rate limiting** (per-user/IP counters, short windows) is a good fit for Upstash Redis (tentative choice; confirm before building). Apply it to flag creation, auth endpoints, and LLM-backed endpoints.
+- **Anomaly detection** (e.g. many new accounts flagging the same JD) needs account age and flag history, so compute it from Postgres data, not from Redis counters alone.
+- Keep both behind small interfaces so the limiter can be swapped and mocked in tests.

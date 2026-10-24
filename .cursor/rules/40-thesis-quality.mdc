@@ -1,0 +1,65 @@
+---
+description: Thesis-grade quality rules for scam detection, AI analysis, explainability, logging and evaluation
+globs: **/scam/**,**/detection/**,**/analysis/**,**/llm/**,**/flags/**,**/evaluation/**,**/eval/**
+alwaysApply: false
+---
+
+# Thesis quality: proving this is more than a prompt wrapper
+
+The thesis claims a **hybrid, explainable, evidence-based** system. Code must make that claim demonstrable and measurable.
+
+## 1. Separate rules from LLM output
+- The **rule engine**, the **LLM semantic analysis**, and the **community flag weight** are three independent signals. Keep them in separate modules with separate result types.
+- A final verdict is produced by a small, documented **aggregator** that combines the signals. Never let one signal silently overwrite another.
+- Rules run first and are deterministic. The LLM is invoked **only when rules are inconclusive** (as the form specifies). Record *why* the LLM was or wasn't invoked.
+- Rules are **data/config-driven** ("dynamic rules"): id, name, description, pattern/condition, severity, enabled flag, version. Admins/developers can change them without rewriting engine code.
+- Rule thresholds and combination weights live in config with comments, not magic numbers in code.
+
+## 2. Everything is explainable (evidence-based)
+Every verdict returned to the UI must carry structured evidence:
+```ts
+type Evidence = {
+  source: 'rule' | 'llm' | 'community' | 'blacklist';
+  ruleId?: string;          // for rules
+  summary: string;          // human-readable reason
+  excerpt?: string;         // exact JD text span that triggered it, if any
+  severity: 'low' | 'medium' | 'high';
+  confidence?: number;      // 0..1, for LLM/aggregate signals
+};
+```
+- The warning banner lists this evidence. No evidence -> no warning.
+- Prefer verbatim excerpts from the JD over LLM paraphrase when showing evidence. If the LLM provides a quoted excerpt, verify it actually appears in the JD before showing it.
+- Wording: say "shows signs of..." / "possible scam", never assert certainty. Provide a way to flag a wrong warning (false positive feedback).
+
+## 3. Logging and auditability
+Log structured (JSON) events, **without storing raw CV content or secrets**:
+- rule evaluation: JD id, rule ids fired, rule-set version, timestamp
+- LLM call: purpose (`skill_extraction` | `scam_analysis`), model, prompt version, latency, token usage, schema-valid yes/no, retry count, error type
+- aggregation: input signals, final verdict, aggregator version
+- flags: create / freeze / release / reject with actor and reason
+- trust score changes: old, new, reason
+These logs are what the thesis evaluation and the admin review rely on. Do not remove them to "clean up".
+
+## 4. Reproducibility
+- Version the **prompts**, **rule set**, **aggregator**, and **model name**. Store the versions alongside each stored analysis result.
+- Use low temperature / deterministic settings for extraction and classification where the provider supports it.
+- Keep prompts in dedicated files, not inline strings scattered in code.
+
+## 5. Evaluation (required deliverables from the form)
+The form commits to: functional testing, **AI accuracy on a labeled dataset**, and usability tests.
+- Keep an evaluation folder (e.g. `evaluation/`) with:
+  - `dataset/`: labeled JDs (`genuine` / `misleading` / `scam`, plus expected skills for extraction). Record source, label, and labeling method for each item. **Do not invent or fabricate dataset entries or labels.** Ask the user how data is collected and labeled. Anonymize any personal data.
+  - `scripts/`: runnable scripts that compute **precision, recall, F1, accuracy, confusion matrix** for scam detection, and precision/recall for skill extraction.
+  - `results/`: outputs with date, model, prompt version, rule-set version.
+- Evaluate **three configurations** to show the value of the hybrid design: (a) rules only, (b) LLM only, (c) hybrid. Report them side by side.
+- Report false positives explicitly (flagging a legit job as a scam hurts users) and include error analysis.
+- Never present made-up metrics. If an evaluation was not run, say so.
+- Usability testing: keep a script/questionnaire template in `docs/` (e.g. task list + SUS-style questions) only after the user confirms the method.
+
+## 6. Anti "prompt wrapper" checklist (apply when designing any AI feature)
+- [ ] Deterministic logic handles what it can; the LLM handles only ambiguity.
+- [ ] LLM output is schema-validated, with a retry/fallback path.
+- [ ] Output includes evidence and confidence, and is checked against the source text.
+- [ ] Behavior is configurable, versioned, logged, and measurable.
+- [ ] A baseline (rules only) exists to compare against.
+- [ ] Failure of the LLM never breaks the core product.

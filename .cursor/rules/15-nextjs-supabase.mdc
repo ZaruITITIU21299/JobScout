@@ -1,0 +1,47 @@
+---
+description: Stack-specific conventions for Next.js, Supabase, Upstash Redis, Gemini and Vercel
+alwaysApply: true
+---
+
+# Stack conventions
+
+Stack (see `AGENTS.md` section 5): **Next.js + TypeScript**, **Supabase** (Postgres, Auth, RLS, Storage), **Gemini Flash** (initial), **Upstash Redis** (tentative), **Vercel**.
+Do not add or swap layers without approval. Verify package names and APIs against the installed versions and official docs; do not rely on memory for version-specific details.
+
+## Supabase clients (keep these separate)
+1. **Browser client**: anon key, used only in client components for things that are safe under RLS.
+2. **Server client** (per request, cookie-aware, user-scoped): default for server code. Runs *as the user*, so RLS applies.
+3. **Admin client** (service role): bypasses RLS. Only in server-only modules (mark with the `server-only` package if approved), only for admin-justified operations, never imported by client code.
+Never create these clients ad hoc inside components. Keep one factory per type in a clear folder (e.g. `lib/supabase/`).
+
+## Auth
+- Use Supabase Auth for email/password and OAuth. Do not hand-roll sessions or password handling.
+- Keep the session fresh on the server using the officially recommended Next.js integration for the installed Supabase version (check docs; it has changed over time).
+- Protect routes on the **server** (middleware/route handlers/server actions + RLS). Client-side redirects are only UX.
+- Store the role (`user` / `admin`) in a place the user cannot edit (not in user-editable metadata). Use it in RLS policies and server checks.
+
+## Database workflow
+- All schema changes go through **migration files** (Supabase CLI, `supabase/migrations/`), never by clicking in the dashboard. Schema changes need user approval first.
+- RLS enabled on every table in an exposed schema, default deny, explicit policies, each documented in the migration.
+- Generate TypeScript types from the database schema (Supabase CLI) and use them instead of hand-written row types. Regenerate after every migration.
+- Seed data for development and tests goes in a seed file; never commit real user data.
+- Test RLS with at least two users plus an admin (see `30-testing.mdc`).
+
+## Rate limiting (Upstash Redis, tentative)
+- Use it for per-user/IP limits on: auth endpoints, flag creation, LLM-backed endpoints.
+- Return `429` with the standard error shape and a retry hint.
+- Wrap the limiter in a small interface so it can be mocked in tests and replaced later.
+- Credentials are server-side env vars only.
+
+## LLM (Gemini)
+- Follow `70-llm-integration.mdc`. Model name from env/config, not hardcoded. Server-side only.
+
+## Vercel
+- Env vars are managed per environment (Development / Preview / Production). Never commit them. Keep `.env.example` in sync with the variable **names**.
+- Serverless function time and size limits apply; design LLM and fetch work accordingly (timeouts, retries, caching).
+- Do not rely on local filesystem writes or in-memory state persisting between requests.
+- Production deploys happen only when the user asks. Do not run deploy commands on your own.
+
+## Local development
+- Prefer the Supabase local stack (CLI) for development if the user sets it up; otherwise use a separate **development** Supabase project, never the production one.
+- Never run destructive database commands (reset, drop) against a hosted project without explicit approval.

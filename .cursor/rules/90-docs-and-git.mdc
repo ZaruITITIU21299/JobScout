@@ -1,0 +1,22 @@
+---
+description: Documentation, decision log, and commit conventions
+alwaysApply: true
+---
+
+# Docs and Git
+
+## Docs (English)
+- `README.md`: what JobScout is, how to run, env vars (names only), how to test.
+- `docs/DECISIONS.md`: short decision records (date, decision, alternatives, reason). Add an entry whenever the user approves a stack choice, schema change, formula, threshold, or architecture change. These feed the thesis report.
+- `docs/REQUIREMENTS.md`: a faithful restatement of the Thesis Registration Form modules (#1–#6). Update only when the user changes requirements.
+- `docs/EVALUATION.md`: how the labeled dataset was built, metrics, and results (real results only).
+- Document *why*, not only *what*. Comments explain intent or non-obvious decisions; do not narrate obvious code.
+
+## Git
+- Do not commit, push, or rewrite history unless asked.
+- Conventional Commits in English: `feat(flags): freeze flags from burst of new accounts`.
+- One logical change per commit. Reference the module (pipeline, ai, scam, flags, security, eval).
+- Never commit `.env`, datasets with personal data, or build output.
+
+## Traceability
+When finishing a task, mention which form module (#1–#6) it supports. If a change supports no module, say so and ask whether to keep it.

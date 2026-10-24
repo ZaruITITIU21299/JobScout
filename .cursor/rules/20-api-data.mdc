@@ -1,0 +1,47 @@
+---
+description: API response formats, validation, error handling, and database rules
+globs: **/api/**,**/server/**,**/services/**,**/db/**,**/migrations/**,**/*.sql
+alwaysApply: false
+---
+
+# API and data rules
+
+## Server-side only
+- All **LLM calls and privileged database calls run on the server**. The browser never sees LLM keys or service-role credentials.
+- The client talks to the backend through a typed API layer; no direct LLM calls from the client.
+- Stack: Next.js server code (route handlers / server actions) + Supabase Postgres. Supabase-specific rules are in `15-nextjs-supabase.mdc`; where LLM calls run is still to be approved by the user.
+
+## Response format (use consistently; confirm exact shape with the user once, then keep it)
+```ts
+// success
+{ "data": <T>, "meta"?: { ... } }
+// failure
+{ "error": { "code": "VALIDATION_ERROR", "message": "Human-readable message", "details"?: [...] } }
+```
+- Error `code` is a stable machine-readable string. `message` is safe to show to users.
+- Use correct HTTP status codes: 400 validation, 401 unauthenticated, 403 forbidden, 404 not found, 409 conflict, 422 semantically invalid, 429 rate-limited, 5xx server/upstream.
+- Never leak stack traces, SQL, internal paths, prompts, or provider error bodies in responses.
+
+## Validation
+- Validate **every** request body, query, and param at the boundary with a schema. Reject unknown fields where reasonable.
+- Validate **LLM output** with a schema too (see `70-llm-integration.mdc`). LLM output is untrusted input.
+- Normalize and length-limit user text (JD text, company names, flag reasons) before storing or sending to an LLM.
+- Validate URLs (scheme allowlist `http/https`) and guard against SSRF when fetching JD links: block private/loopback/link-local ranges, limit redirects, size and timeout.
+
+## Error states
+- Every endpoint defines: validation error, auth error, not-found, rate-limit, upstream (LLM/fetch) failure.
+- **Graceful degradation**: if the LLM fails or times out, the app must still save the job card and run the rule-based engine. Mark AI fields as "pending/unavailable" and allow retry. Never block the core Kanban flow on AI.
+- Retries only for idempotent operations, with backoff and a cap.
+
+## Database rules
+- Relational schema, migrations only (no manual changes). **Any schema change requires user approval first.**
+- Migrations are append-only and reversible where possible; name them descriptively.
+- **RLS enabled on every user-data table** (resumes, applications/job cards, flags, trust data, analysis results). Default deny; add explicit policies. Document each policy in the migration.
+- Use primary keys, foreign keys with deliberate `ON DELETE` behavior, `NOT NULL`, `CHECK` constraints, and indexes for known query paths.
+- Store timestamps as UTC (`created_at`, `updated_at`). Prefer soft-delete or audit rows for flags and moderation decisions (needed for evaluation and admin review).
+- Store LLM structured output as JSON(B) **plus** the metadata needed to reproduce it: model name, prompt version, timestamp.
+- Use parameterized queries / the query builder only. No string-concatenated SQL.
+- Never log or return other users' CV content. Admins see only what a review genuinely needs.
+
+## Idempotency and concurrency
+- Moving a Kanban card and creating a flag must be safe to retry and safe under concurrent requests (use transactions/unique constraints, e.g. one flag per user per target).

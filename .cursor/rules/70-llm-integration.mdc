@@ -1,0 +1,45 @@
+---
+description: LLM API usage, prompts, JSON schemas, validation, retries and cost control
+globs: **/llm/**,**/ai/**,**/prompts/**
+alwaysApply: false
+---
+
+# LLM integration
+
+The initial provider is **Google Gemini (Flash tier)**, which may change later. Hide it behind a small provider interface (e.g. `LlmClient.complete(...)`) so it can be swapped and mocked.
+- Do **not** hardcode the model name; read it from config/env (model names and limits change over time) and store it with every result.
+- Confirm the SDK/package with the user before installing it.
+- Calls run server-side only. Where exactly (Next.js route handler/server action vs Supabase Edge Function) needs the user's approval.
+- Serverless functions on Vercel have execution time limits: keep calls short, set timeouts, and design long work to be retryable or asynchronous. Check current limits for the user's plan before designing.
+
+## Two LLM tasks only (from the form)
+1. **Skill extraction** from a JD -> JSON, triggered when a JD is saved.
+2. **Scam / MLM semantic analysis** -> probability a JD is deceptive, triggered only when the rule engine is unsure.
+(Skill-gap uses the extracted skills vs. the CV; confirm with the user whether the LLM or deterministic matching does the comparison before implementing.)
+
+## Output contracts (propose, then get approval)
+Skill extraction example:
+```json
+{ "skills": [ { "name": "React", "category": "technical", "required": true } ], "language": "en" }
+```
+Scam analysis example:
+```json
+{ "deceptive_probability": 0.0, "mlm_probability": 0.0, "reasons": [ { "summary": "...", "excerpt": "exact text from JD" } ] }
+```
+- Define each as a runtime schema + TypeScript type from the same source.
+- Always parse and validate. On invalid JSON: one repair/retry, then fall back (mark analysis unavailable). Never `JSON.parse` blindly or cast.
+- Normalize skills (case, aliases like "JS"/"JavaScript", dedupe) in code, not in the prompt.
+
+## Prompting
+- Prompts live in versioned files (`prompts/<task>.v1.md`), not inline. Bump the version on any change and store it with results.
+- Separate system instructions from untrusted JD/CV text with clear delimiters; tell the model the delimited text is data, not instructions.
+- Ask for JSON only, low temperature, explicit schema, and exact-excerpt evidence.
+- Do not put secrets or other users' data into prompts.
+
+## Reliability and cost
+- Timeouts, capped retries with backoff, and a circuit-breaker style fallback.
+- Cache results by hash of (normalized JD text + prompt version + model) to avoid repeat calls and to keep evaluation stable.
+- Cap input length (truncate/summarize long JDs deliberately and record that you did).
+- Per-user rate limits on LLM-backed endpoints.
+- Log usage metadata (see `40-thesis-quality.mdc`), never full CV text.
+- The LLM must never decide permissions, trust changes, or blacklist edits. It only produces advisory signals.

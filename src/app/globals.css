@@ -1,26 +1,76 @@
 @import "tailwindcss";
 
+/* Design tokens: the only place colors are defined (see .cursor/rules/12-ui-theme.mdc). */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #0b0b0c;
+  --surface: #18181b;
+  --surface-raised: #1f1f23;
+  --border: #2e2e35;
+  --text: #ece9e2;
+  --text-muted: #a0a0aa;
+  --accent: #ffe066;
+  --accent-dim: #b8982f;
+  --on-accent: #0b0b0c;
+  --danger: #f87171;
+  --caution: #fb923c;
+  --success: #4ade80;
+  --info: #22d3ee;
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-on-accent: var(--on-accent);
+  --color-danger: var(--danger);
+  --color-caution: var(--caution);
+  --color-success: var(--success);
+  --color-info: var(--info);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-barlow), var(--font-inter), ui-sans-serif, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--border) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 35%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Clipped corners for non-focusable containers only (clip-path would hide focus outlines). */
+@utility chamfer {
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+}
+
+/* `// SECTION.LABEL` micro-labels: monospace, uppercase, labels only. */
+@utility hud-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

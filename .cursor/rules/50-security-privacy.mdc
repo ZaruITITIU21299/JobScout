@@ -1,0 +1,41 @@
+---
+description: Authentication, RLS, secrets, and privacy of CV/personal data
+alwaysApply: true
+---
+
+# Security and privacy
+
+CVs contain personal data (name, contact info, work history). Treat it as sensitive.
+
+## Secrets
+- API keys (LLM, database service role, OAuth secrets) are **server-side env vars only**. Never in frontend code, public env vars, logs, error messages, tests, or commits.
+- Keep `.env.example` with placeholder names only. If you see a real secret in the repo, stop and tell the user.
+
+## Authentication and authorization
+- Auth via email/password and OAuth, handled by the backend service. Do not hand-roll password hashing or token crypto; use the chosen auth provider/library.
+- **Authorize on the server for every request**; hiding a button in the UI is not security.
+- Only two roles: `user` and `admin`. Admin checks happen server-side and in RLS policies. Never trust a role sent from the client.
+- **RLS**: users can read/write only their own CVs, applications, and flags. Test policies (see `30-testing.mdc`).
+
+## Data handling
+- Minimize data sent to the LLM: send the JD text, and CV content **only** when the user explicitly runs skill-gap analysis. Prefer sending extracted skill lists over full CVs where possible. Never send emails/phones/addresses to the LLM if avoidable.
+- Do not log raw CV/JD bodies or PII. Log ids and metrics.
+- Treat JD text and CV text as **untrusted input**: guard against **prompt injection** (JD text may say "ignore previous instructions"). Keep instructions and untrusted content separated, validate outputs, and never let LLM output trigger privileged actions directly.
+- Escape/sanitize user and LLM text before rendering (no `dangerouslySetInnerHTML` with untrusted content).
+- Users can delete their CVs/applications; deletion must actually remove data (and derived analysis).
+
+## Web security basics
+- CSRF/CORS configured deliberately; secure, httpOnly cookies if cookies are used.
+- Rate limit auth endpoints, flagging, and LLM-backed endpoints (cost and abuse control).
+- Validate and cap upload size/type for CVs; never execute uploaded content.
+- Dependencies: do not add new packages without approval; prefer well-maintained ones.
+
+## Privacy of flags
+- Public/aggregate warning data must not reveal who flagged. Only admins can see reporter identity, and only for review.
+
+## Supabase and Vercel specifics
+- The Supabase **anon key** is public by design and is only safe because **RLS is enabled with correct policies on every table**. A table without RLS is a data leak.
+- The Supabase **service-role key bypasses RLS**. Use it only in server-only modules, never in client code, never in `NEXT_PUBLIC_*` variables, and only for operations that truly need it (e.g. admin jobs). Prefer user-scoped clients so RLS keeps protecting data.
+- CV files in Supabase Storage need **bucket policies** that restrict access to the owner (and admins only if a review requires it). No public buckets for CVs.
+- Secrets live in Vercel environment variables and local `.env.local` (gitignored). Preview deployments must not use production secrets or the production database unless the user approves.
+- Before sending CV content to Gemini, check the data-use terms of the API tier being used and tell the user what they imply.

@@ -1,0 +1,50 @@
+---
+alwaysApply: false
+---
+
+# Pi mode (manual only)
+
+Active ONLY when the user @-mentions this rule or writes "pi mode" in the current message. If neither happened, ignore this file completely and follow `AGENTS.md` normally.
+Stays active for the rest of that task; ends when the user gives a new task without mentioning it.
+
+Modeled on Pi (badlogic / Mario Zechner's minimal coding agent): tiny process, few moving parts, act instead of discuss, no ceremony.
+
+## What changes in this mode
+While active, this rule **overrides the process rules** in `AGENTS.md` section 7 and `00-workflow.mdc`. Specifically, do NOT:
+- present a plan or wait for approval before implementing,
+- ask clarifying questions for ordinary ambiguity,
+- write the 4-part "what / why / how to test / assumptions" summary,
+- explain what you did or how, narrate steps, or restate the request,
+- create plans, to-do lists, or notes files, or spawn sub-agents or background tasks, unless the user asked,
+- use optional tools (MCP, web) unless the task needs them.
+
+Everything about the **quality of the code** still applies: TypeScript strictness, accessibility, UI theme, security and RLS rules, stack conventions, thesis-quality rules, English-only code and comments, and "do not invent requirements" (see below). Only the ceremony is removed, not the standards.
+
+## How to work (Pi loop)
+1. Read the relevant files first (never edit from memory).
+2. Make the smallest correct change with direct file edits and shell commands.
+3. Run the project's checks: type-check, lint, and the tests relevant to the change.
+4. If a check fails, fix it and re-run. Never weaken, skip, or delete tests to get green.
+5. Stop when done. No victory lap.
+
+## Ambiguity
+- Pick the simplest reasonable interpretation that fits the approved scope (`AGENTS.md` section 2) and keep going.
+- Never invent product requirements or silently add out-of-scope features (`AGENTS.md` section 3).
+- If a value is not specified (trust-score formula, thresholds, rate limits, Kanban stages, rule lists), put it in the central config as a clearly named constant with a `// PROPOSED: needs approval` comment and mention it in the final message.
+
+## Dependencies and schema
+- Use what the project already has. Add a new dependency only if it is already named in `docs/DECISIONS.md` or `AGENTS.md` section 5; otherwise find a way without one, or stop (see hard stops).
+- You may write new migration files (RLS enabled, policies included, types regenerated if the tooling exists). **Never apply them to a hosted database.** Say they are unapplied in the final message.
+
+## Hard stops (still stop and ask, even in this mode)
+- Destructive or irreversible commands: dropping/resetting databases, `rm -rf` outside build output, force push, history rewrite, deleting files you did not create.
+- Anything touching a hosted Supabase project, production env vars, or deployment.
+- Real secrets: never print, commit, or move them.
+- Weakening RLS, auth, or any security control.
+- A new dependency that is not already decided.
+- Do not `git commit`, `git push`, or deploy unless the user asked.
+
+## Final message format
+At most two lines, plain text, no headings, no bullets, no emojis:
+`Done: <what, max ~12 words>. Checks: pass | fail (<which>) | not run.`
+Then, only if needed, one line with what the user must do (apply a migration, set an env var, approve a proposed value, or the blocker). If a hard stop was hit, say it in one line and wait.

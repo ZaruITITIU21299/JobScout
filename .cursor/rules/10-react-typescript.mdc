@@ -1,0 +1,55 @@
+---
+description: React, Next.js and TypeScript conventions, strictness, hooks, accessibility
+globs: **/*.ts,**/*.tsx
+alwaysApply: false
+---
+
+# React + TypeScript
+
+## TypeScript
+- `strict: true`. Do not loosen `tsconfig` to silence errors.
+- **No `any`.** Use `unknown` + narrowing, generics, or proper types. No `@ts-ignore`; if `@ts-expect-error` is unavoidable, add a comment explaining why.
+- Avoid non-null assertions (`!`) and unchecked `as` casts. Parse external data (API, LLM output, URL params) with a runtime validator (e.g. a schema library, after confirming which one the project uses) instead of casting.
+- Prefer `type` for unions/props and `interface` for extendable object contracts; be consistent with the existing code.
+- Model states with discriminated unions, e.g. `{ status: 'loading' } | { status: 'error'; error: AppError } | { status: 'success'; data: T }`.
+- Use `as const` objects or string-literal unions instead of `enum`.
+- Shared domain types (Job, Flag, TrustScore, SkillExtraction, ScamVerdict...) live in one shared place. Do not redeclare them per component.
+
+## Components
+- Function components only. One component per file, `PascalCase.tsx`; hooks `useThing.ts`; utilities `camelCase.ts`.
+- Keep components small and presentational where possible; put data fetching and logic in hooks/services.
+- Explicit props types; no spreading unknown props blindly. Default exports only if the project already does so.
+- Do not define components inside components.
+- Handle **loading, empty, error, and success** states for every data-driven view.
+
+## Hooks
+- Follow the Rules of Hooks; keep dependency arrays correct (do not disable the lint rule without a comment).
+- Do not use `useEffect` for things that can be derived during render or handled in an event handler.
+- Clean up subscriptions, timers, and in-flight requests (abort on unmount).
+- Memoize (`useMemo`/`useCallback`/`React.memo`) only when there is a measured or obvious need (e.g. Kanban lists with many cards).
+
+## Accessibility (required)
+- Semantic HTML first (`button`, `nav`, `main`, `form`, `label`). No clickable `div`s.
+- All inputs have labels; errors are associated via `aria-describedby`; use `aria-live` for async status.
+- Everything usable by keyboard. **Kanban drag-and-drop must have a keyboard alternative** (e.g. a "Move to stage" control).
+- Visible focus styles; sufficient color contrast; never rely on color alone. **The scam warning banner must be understandable without color** (icon + text, `role="alert"` or `role="status"` as appropriate).
+- Images have `alt`; icon-only buttons have `aria-label`.
+
+## UI/UX conventions
+- UI text is English. Keep strings easy to find (constants or i18n file if the project has one).
+- Show the **evidence** behind any warning or AI result; never show a bare "scam" label.
+- Always label AI-generated content as AI-generated and indicate uncertainty (e.g. confidence) where available.
+- Never expose raw LLM output, stack traces, or internal IDs to the user.
+
+## Hygiene
+- No `console.log` left in committed code. Use the project's logger.
+- No secrets, API keys, or service credentials in frontend code or `VITE_`/`NEXT_PUBLIC_`-style public env vars.
+- Follow the existing ESLint/Prettier config; do not reformat unrelated code.
+
+## Next.js specifics
+- Follow the router the project already uses (`app/` = App Router, `pages/` = Pages Router). New projects default to the App Router; do not mix without approval.
+- **Server Components by default.** Add `'use client'` only for components that need state, effects, or browser APIs; keep client components small and push them to the leaves.
+- Fetch data on the server where possible. Never import server-only modules (service-role Supabase client, LLM client, Upstash client) into client components.
+- Environment variables with the `NEXT_PUBLIC_` prefix are **exposed to the browser**. Never put secrets in them.
+- Use `next/link` and `next/image` as intended; handle `loading.tsx`, `error.tsx`, and `not-found.tsx` for routes with data.
+- Kanban drag-and-drop is a client component; keep the board state isolated there and sync with the server through typed actions/endpoints.

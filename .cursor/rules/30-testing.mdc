@@ -1,0 +1,45 @@
+---
+description: Test requirements and manual QA checklist
+globs: **/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/tests/**,**/__tests__/**
+alwaysApply: false
+---
+
+# Testing
+
+Do not assume a test runner. Check `package.json`; if none exists, ask before adding one.
+
+## Requirements
+- New logic ships with tests in the same change. Bug fixes ship with a regression test that fails before the fix.
+- **Must be unit-tested** (pure functions, no network):
+  - each rule in the rule-based scam engine (positive case, negative case, edge case),
+  - trust-score calculation and flag-weight aggregation,
+  - anti-gaming checks (rate limit, burst detection, new-account clustering),
+  - LLM output schema validation (valid, malformed, missing fields, extra fields),
+  - skill-gap computation (matching, synonyms/normalization, empty CV, empty JD),
+  - Kanban stage transition logic.
+- **Integration tests** for API endpoints: success, validation error, unauthenticated, forbidden, rate-limited.
+- **RLS tests**: user A cannot read/update/delete user B's CVs, applications, or flags; admin-only operations reject normal users.
+- **Never call the real LLM in automated tests.** Use a mock/fake provider with fixed fixtures. Real-LLM runs belong only to the evaluation scripts (see `40-thesis-quality.mdc`).
+- Tests must be deterministic: no reliance on wall-clock time, randomness, or network (inject clock/RNG).
+- Test names describe behavior: `flags_from_new_accounts_are_frozen_when_burst_detected`.
+- Do not delete or weaken a failing test to get green. Explain the failure instead.
+
+## Frontend testing
+- Test behavior via accessible queries (role, label, text), not implementation details.
+- Cover loading, empty, error, success states, and the scam warning banner (shows evidence, accessible).
+
+## Manual test checklist (include relevant items in your "How to test it")
+- [ ] Sign up / log in with email+password; log in with OAuth; log out.
+- [ ] Add a job manually; add a job by pasting a link; metadata (company, position, date) auto-saved.
+- [ ] Drag a card between stages; reload; position/stage persists. Keyboard alternative works.
+- [ ] Upload/save a CV; create a new version; select a version for analysis.
+- [ ] Save a JD -> skills JSON appears; run skill-gap with a chosen CV.
+- [ ] Paste a clearly fake JD ("payment required", "high salary no experience") -> warning banner with evidence.
+- [ ] Paste a normal JD -> no false warning.
+- [ ] Simulate LLM failure -> card still saved, rules still run, AI status shows unavailable + retry.
+- [ ] Flag a JD/Company; flag weight updates; duplicate flag by same user rejected.
+- [ ] Rapid repeated flagging -> rate limited (429) and shown clearly.
+- [ ] Many fresh accounts flagging one JD -> flags frozen, appear in admin queue.
+- [ ] Admin can review, release/reject frozen flags, edit blacklist; normal user cannot access admin pages/APIs.
+- [ ] User A cannot see user B's data (try direct URL/ID access).
+- [ ] No API keys visible in browser network tab, bundle, or source.
