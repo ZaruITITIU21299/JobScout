@@ -5,7 +5,7 @@ import { z } from "zod";
 import { fail, fromDatabaseError, ok, UNAUTHENTICATED, validationFailure } from "@/lib/actionResult";
 import { getUserOrNull } from "@/lib/auth";
 import { CV_BUCKET, CV_TITLE_MAX_LENGTH } from "@/lib/config";
-import { checkCvFile, safeFileName, type CvFileCheck } from "@/lib/cvs/cvFile";
+import { checkCvFile, CV_HEAD_BYTES, safeFileName, type CvFileCheck } from "@/lib/cvs/cvFile";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/types";
@@ -27,7 +27,7 @@ const titleSchema = z
 async function readCvFile(formData: FormData): Promise<ValidCv | { ok: false; message: string }> {
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { ok: false, message: "Choose a PDF or DOCX file." };
-  const head = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+  const head = new Uint8Array(await file.slice(0, CV_HEAD_BYTES).arrayBuffer());
   const check = checkCvFile(file.name, file.size, head);
   return check.ok ? { ...check, file } : check;
 }

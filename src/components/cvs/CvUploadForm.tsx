@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState, useEffect, useRef, type FormEvent } from "react";
 import { uploadResume, uploadResumeVersion } from "@/app/(app)/cvs/actions";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
@@ -18,9 +18,21 @@ export function CvUploadForm({ resumeId }: CvUploadFormProps) {
   const [state, formAction, pending] = useActionState(resumeId ? uploadResumeVersion : uploadResume, null);
   const prefix = resumeId ? `v-${resumeId}` : "new-cv";
   const fieldErrors = state?.error?.fieldErrors;
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (state?.data) formRef.current?.reset();
+  }, [state]);
+
+  // Submitting via onSubmit instead of `action` stops React from clearing the fields when the upload fails.
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    startTransition(() => formAction(formData));
+  }
 
   return (
-    <form action={formAction} className="flex flex-col gap-4" noValidate>
+    <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
       <div aria-live="polite">
         {state?.data ? <Banner variant="success">{state.data}</Banner> : null}
         {state?.error && !fieldErrors ? <Banner variant="danger">{state.error.message}</Banner> : null}

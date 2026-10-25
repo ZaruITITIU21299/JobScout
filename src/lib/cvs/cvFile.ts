@@ -9,8 +9,18 @@ export type CvFileCheck =
 const PDF_MAGIC = [0x25, 0x50, 0x44, 0x46, 0x2d]; // "%PDF-"
 const ZIP_MAGIC = [0x50, 0x4b, 0x03, 0x04]; // DOCX is a ZIP container
 
-function startsWith(bytes: Uint8Array, magic: number[]) {
-  return magic.every((byte, i) => bytes[i] === byte);
+/** Bytes the caller must pass as `head`; readers accept a PDF header anywhere in the first 1024 bytes. */
+export const CV_HEAD_BYTES = 1024;
+
+function startsWith(bytes: Uint8Array, magic: number[], offset = 0) {
+  return magic.every((byte, i) => bytes[offset + i] === byte);
+}
+
+function hasPdfHeader(head: Uint8Array) {
+  for (let offset = 0; offset + PDF_MAGIC.length <= head.length; offset++) {
+    if (startsWith(head, PDF_MAGIC, offset)) return true;
+  }
+  return false;
 }
 
 /**
@@ -24,7 +34,7 @@ export function checkCvFile(fileName: string, size: number, head: Uint8Array): C
   }
 
   const extension = fileName.toLowerCase().split(".").pop();
-  if (extension === "pdf" && startsWith(head, PDF_MAGIC)) {
+  if (extension === "pdf" && hasPdfHeader(head)) {
     return { ok: true, kind: "pdf", mimeType: CV_MIME_TYPES.pdf };
   }
   if (extension === "docx" && startsWith(head, ZIP_MAGIC)) {
